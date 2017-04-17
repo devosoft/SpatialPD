@@ -1,0 +1,391 @@
+# Set the working directory to where you actually have the data.  I created a few folders based on different sets of runs.
+
+# The basic directory ran off the bash lines: counter=1000; for i in $( seq 0.02 0.005 0.145 ); do for j in 0.01994711 0.02731371 0.03153916 0.03454941; do for k in {1..10}; do ./SimplePDWorld -u $i -r $j -N 6400 -E 5001 -SEED $((k+counter)); counter=$((counter+10)); done; done; done;
+# and was used to generate the data for Figure 3.
+
+# The MorePrecision directory ran off the bash lines: counter=1000; for i in 0.02; do for j in 0.01994711 0.02115711 0.02230155 0.02339006 0.02443013 0.02542768 0.02638755 0.02731371 0.02820948 0.02907767 0.02992067 0.03074057 0.03153916 0.03231802 0.03382198 0.03454941 0.03526185 0.03596017 0.03664519 0.03731763 0.03797817 0.03862742; do for k in {1..10}; do ./SimplePDWorld -u $i -r $j -N 6400 -E 11 -SEED $((k+counter)); counter=$((counter+10)); done; done; done;
+# and was used to generate the data for Figure 4.
+
+setwd("~/Dropbox/Wiser, Mike/Projects/SpatialPD/")
+
+setwd("~/Dropbox/Wiser, Mike/Projects/SpatialPD/MorePrecision/")
+
+# Read in the data file.  This shole section is just for the data for Figure 3.
+combined.data <- read.table(file="all_data.csv", header=T, sep=",")
+
+summary(combined.data)
+
+# Look at just the end point. 
+endpoint.data <- subset(combined.data, epoch==5000)
+
+# Calculate the Order parameter.
+endpoint.data$Order <- (endpoint.data$num_coop - endpoint.data$num_defect)/(endpoint.data$num_coop + endpoint.data$num_defect)
+
+# Separate the data for the different radii:
+endpoint.data.8 <- subset(endpoint.data, r==0.0199471)
+endpoint.data.15 <- subset(endpoint.data, r==0.0273137)
+endpoint.data.20 <- subset(endpoint.data, r==0.0315392)
+endpoint.data.24 <- subset(endpoint.data, r==0.0345494)
+
+# Generate the panels for Figure 3 (called Fig 2 when I was writing this):
+plot(x=endpoint.data.8$u, y=endpoint.data.8$Order, xlab="u", ylab="Order", xlim=c(0.02, 0.14), ylim=c(-1, 1))
+
+plot(x=endpoint.data.15$u, y=endpoint.data.15$Order, xlab="u", ylab="Order", xlim=c(0.02, 0.14), ylim=c(-1, 1))
+
+plot(x=endpoint.data.20$u, y=endpoint.data.20$Order, xlab="u", ylab="Order", xlim=c(0.02, 0.14), ylim=c(-1, 1))
+
+plot(x=endpoint.data.24$u, y=endpoint.data.24$Order, xlab="u", ylab="Order", xlim=c(0.02, 0.14), ylim=c(-1, 1))
+
+graphics.off()
+png(filename="Fig.2A.png")
+plot(x=endpoint.data.8$u, y=endpoint.data.8$Order, xlab="u", ylab="Order", xlim=c(0.02, 0.24), ylim=c(-1, 1))
+dev.off()
+
+graphics.off()
+png(filename="Fig.2B.png")
+plot(x=endpoint.data.15$u, y=endpoint.data.15$Order, xlab="u", ylab="Order", xlim=c(0.02, 0.14), ylim=c(-1, 1))
+dev.off()
+
+graphics.off()
+png(filename="Fig.2C.png")
+plot(x=endpoint.data.20$u, y=endpoint.data.20$Order, xlab="u", ylab="Order", xlim=c(0.02, 0.14), ylim=c(-1, 1))
+dev.off()
+
+graphics.off()
+png(filename="Fig.2D.png")
+plot(x=endpoint.data.24$u, y=endpoint.data.24$Order, xlab="u", ylab="Order", xlim=c(0.02, 0.14), ylim=c(-1, 1))
+dev.off()
+
+# This section generates the information about the actual neighborhoods.
+combined.neighborhood.data <- read.table(file="all_data_neighborhood.csv", header=T, sep=",")
+
+r_list <- unique(combined.neighborhood.data$r)
+u_list <- unique(combined.neighborhood.data$u)
+
+# Find the number of total runs
+just_0 <- subset(combined.neighborhood.data, neighbors==0)
+total.size <- length(just_0$neighbors)
+
+# Create a matrix to stick data in.
+neighborhood.summary.matrix <- matrix(nrow=total.size, ncol=7)
+
+# Progressively subset the data from a single parameter configuration.  Calculate metrics on that neighborhood.
+# Place calculated values into the matrix you just created for data storage.
+
+outer.counter <- 1
+
+for (i in 1:length(r_list)) {
+	current.r <- r_list[i]
+	current.data.i <- subset(combined.neighborhood.data, r==current.r) 
+	for (j in 1:length(u_list)) {
+		current.u <- u_list[j]
+		current.data.j <- subset(current.data.i, u==current.u)
+		seed.list <- unique(current.data.j$seed)
+		for (k in 1:length(seed.list)) {
+			current.seed <- seed.list[k]
+			current.data.k <- subset(current.data.j, seed==current.seed)
+			current.data.k <- subset(current.data.k, neighbors > 0.5)
+			nodes <- sum(current.data.k$count)
+
+			current.data.k$inverse <- 1/current.data.k$neighbors
+			current.data.k$product <- current.data.k$count * current.data.k$neighbors
+			current.data.k$product2 <- current.data.k$count * current.data.k$inverse
+
+			average.k <- sum(current.data.k$product)/nodes
+			average.inverse <- sum(current.data.k$product2)/nodes
+
+			current.data.k$deviation <- (current.data.k$neighbors - average.k)^2
+			current.data.k$deviation2 <- (current.data.k$inverse - average.inverse)^2
+
+			current.data.k$final.product <- current.data.k$deviation * current.data.k$count
+			current.data.k$final.product2 <- current.data.k$deviation2 * current.data.k$count
+
+			current.sd <- (sum(current.data.k$final.product)/nodes)^0.5
+			current.sd2 <- (sum(current.data.k$final.product2)/nodes)^0.5
+		
+			neighborhood.summary.matrix[outer.counter, 1] <- current.r
+			neighborhood.summary.matrix[outer.counter, 2] <- current.u
+			neighborhood.summary.matrix[outer.counter, 3] <- current.seed
+			neighborhood.summary.matrix[outer.counter, 4] <- average.k
+			neighborhood.summary.matrix[outer.counter, 5] <- current.sd
+			neighborhood.summary.matrix[outer.counter, 6] <- average.inverse
+			neighborhood.summary.matrix[outer.counter, 7] <- current.sd2
+
+			outer.counter <- outer.counter + 1
+			}
+		}
+	}
+
+# Name the columns of the matrix:
+colnames(neighborhood.summary.matrix) <- c("r", "u", "seed", "average.k", "sd.k", "average.inverse", "sd.inverse")
+
+# Convert the matrix into a data frame.  This makes graphing much easier.
+neighborhood.frame <- as.data.frame(neighborhood.summary.matrix)
+
+# Merge the neighborhood information into the endpoint information.
+all.info <- merge(endpoint.data, neighborhood.frame)
+
+# Find the predicted thresholds and their confidence intervals:
+predicted.8 <- subset(all.info, r==0.0199471)
+predicted.15 <- subset(all.info, r==0.0273137)
+predicted.20 <- subset(all.info, r==0.0315392)
+predicted.24 <- subset(all.info, r==0.0345494)
+
+all.k.8 <- sort(predicted.8$average.k)
+all.k.15 <- sort(predicted.15$average.k)
+all.k.20 <- sort(predicted.20$average.k)
+all.k.24 <- sort(predicted.24$average.k)
+
+median.k.8 <- median(all.k.8)
+median.k.15 <- median(all.k.15)
+median.k.20 <- median(all.k.20)
+median.k.24 <- median(all.k.24)
+
+low.k.8 <- all.k.8[floor(length(all.k.8)*0.025)]
+low.k.15 <- all.k.15[floor(length(all.k.15)*0.025)]
+low.k.20 <- all.k.20[floor(length(all.k.20)*0.025)]
+low.k.24 <- all.k.24[floor(length(all.k.24)*0.025)]
+
+high.k.8 <- all.k.8[ceiling(length(all.k.8)*0.975)]
+high.k.15 <- all.k.15[ceiling(length(all.k.15)*0.975)]
+high.k.20 <- all.k.20[ceiling(length(all.k.20)*0.975)]
+high.k.24 <- all.k.24[ceiling(length(all.k.24)*0.975)]
+
+eq.6.median.8 <- 1 / median.k.8
+eq.6.median.15 <- 1 / median.k.15
+eq.6.median.20 <- 1 / median.k.20
+eq.6.median.24 <- 1 / median.k.24
+
+eq.7.median.8 <- 1 / (median.k.8 + 2)
+eq.7.median.15 <- 1 / (median.k.15 + 2)
+eq.7.median.20 <- 1 / (median.k.20 + 2)
+eq.7.median.24 <- 1 / (median.k.24 + 2)
+
+eq.8.median.8 <- (median.k.8 - 1) / (median.k.8^2)
+eq.8.median.15 <- (median.k.15 - 1) / (median.k.15^2)
+eq.8.median.20 <- (median.k.20 - 1) / (median.k.20^2)
+eq.8.median.24 <- (median.k.24 - 1) / (median.k.24^2)
+
+eq.6.low.8 <- 1 / low.k.8
+eq.6.low.15 <- 1 / low.k.15
+eq.6.low.20 <- 1 / low.k.20
+eq.6.low.24 <- 1 / low.k.24
+
+eq.7.low.8 <- 1 / (low.k.8 + 2)
+eq.7.low.15 <- 1 / (low.k.15 + 2)
+eq.7.low.20 <- 1 / (low.k.20 + 2)
+eq.7.low.24 <- 1 / (low.k.24 + 2)
+
+eq.8.low.8 <- (low.k.8 - 1) / (low.k.8^2)
+eq.8.low.15 <- (low.k.15 - 1) / (low.k.15^2)
+eq.8.low.20 <- (low.k.20 - 1) / (low.k.20^2)
+eq.8.low.24 <- (low.k.24 - 1) / (low.k.24^2)
+
+eq.6.high.8 <- 1 / high.k.8
+eq.6.high.15 <- 1 / high.k.15
+eq.6.high.20 <- 1 / high.k.20
+eq.6.high.24 <- 1 / high.k.24
+
+eq.7.high.8 <- 1 / (high.k.8 + 2)
+eq.7.high.15 <- 1 / (high.k.15 + 2)
+eq.7.high.20 <- 1 / (high.k.20 + 2)
+eq.7.high.24 <- 1 / (high.k.24 + 2)
+
+eq.8.high.8 <- (high.k.8 - 1) / (high.k.8^2)
+eq.8.high.15 <- (high.k.15 - 1) / (high.k.15^2)
+eq.8.high.20 <- (high.k.20 - 1) / (high.k.20^2)
+eq.8.high.24 <- (high.k.24 - 1) / (high.k.24^2)
+
+# Graph the full version of Figure 3.  First with just the medians of the predictions:
+
+graphics.off()
+png(filename="Fig2_Combined.png")
+par(mfrow=c(2,2))
+plot(x=predicted.8$u, y=predicted.8$Order, xlab="u", ylab="Order", xlim=c(0.02, 0.14), ylim=c(-1, 1))
+abline(h=0, lty=1, lwd=1, col="black")
+abline(v=eq.6.median.8, lty=1, lwd=1, col="black")
+abline(v=eq.7.median.8, lty=2, lwd=1, col="lightskyblue")
+abline(v=eq.8.median.8, lty=3, lwd=1, col="red")
+mtext("A", side=3, adj=0.05)
+mtext("k = 8", side=3)
+plot(x=predicted.15$u, y=predicted.15$Order, xlab="u", ylab="Order", xlim=c(0.02, 0.14), ylim=c(-1, 1))
+abline(h=0, lty=1, lwd=1, col="black")
+abline(v=eq.6.median.15, lty=1, lwd=1, col="black")
+abline(v=eq.7.median.15, lty=2, lwd=1, col="lightskyblue")
+abline(v=eq.8.median.15, lty=3, lwd=1, col="red")
+mtext("B", side=3, adj=0.05)
+mtext("k = 15", side=3)
+plot(x=predicted.20$u, y=predicted.20$Order, xlab="u", ylab="Order", xlim=c(0.02, 0.14), ylim=c(-1, 1))
+abline(h=0, lty=1, lwd=1, col="black")
+abline(v=eq.6.median.20, lty=1, lwd=1, col="black")
+abline(v=eq.7.median.20, lty=2, lwd=1, col="lightskyblue")
+abline(v=eq.8.median.20, lty=3, lwd=1, col="red")
+mtext("C", side=3, adj=0.05)
+mtext("k = 20", side=3)
+plot(x=predicted.24$u, y=predicted.24$Order, xlab="u", ylab="Order", xlim=c(0.02, 0.14), ylim=c(-1, 1))
+abline(h=0, lty=1, lwd=1, col="black")
+abline(v=eq.6.median.24, lty=1, lwd=1, col="black")
+abline(v=eq.7.median.24, lty=2, lwd=1, col="lightskyblue")
+abline(v=eq.8.median.24, lty=3, lwd=1, col="red")
+mtext("D", side=3, adj=0.05)
+mtext("k = 24", side=3)
+dev.off()
+par(mfrow=c(1,1))
+
+
+
+# And then with the 95% CI for the predictions:
+
+
+graphics.off()
+png(filename="Fig2_Combined_Shading.png")
+par(mfrow=c(2,2))
+plot(x=predicted.8$u, y=predicted.8$Order, xlab="u", ylab="Order", xlim=c(0.02, 0.14), ylim=c(-1, 1))
+polygon(c(eq.6.low.8, eq.6.high.8, eq.6.high.8, eq.6.low.8), c(-1, -1, 1, 1), col="gray40")
+polygon(c(eq.7.low.8, eq.7.high.8, eq.7.high.8, eq.7.low.8), c(-1, -1, 1, 1), col="lightskyblue")
+polygon(c(eq.8.low.8, eq.8.high.8, eq.8.high.8, eq.8.low.8), c(-1, -1, 1, 1), col="red") 
+points(x=predicted.8$u, y=predicted.8$Order)
+abline(h=0, lty=1, lwd=1, col="black")
+abline(v=eq.6.median.8, lty=1, lwd=1, col="black")
+abline(v=eq.7.median.8, lty=2, lwd=1, col="lightskyblue")
+abline(v=eq.8.median.8, lty=3, lwd=1, col="red")
+mtext("A", side=3, adj=0.05)
+mtext("k = 8", side=3)
+plot(x=predicted.15$u, y=predicted.15$Order, xlab="u", ylab="Order", xlim=c(0.02, 0.14), ylim=c(-1, 1))
+polygon(c(eq.6.low.15, eq.6.high.15, eq.6.high.15, eq.6.low.15), c(-1, -1, 1, 1), col="gray40")
+polygon(c(eq.7.low.15, eq.7.high.15, eq.7.high.15, eq.7.low.15), c(-1, -1, 1, 1), col="lightskyblue")
+polygon(c(eq.8.low.15, eq.8.high.15, eq.8.high.15, eq.8.low.15), c(-1, -1, 1, 1), col="red")
+points(x=predicted.15$u, y=predicted.15$Order)
+abline(h=0, lty=1, lwd=1, col="black")
+abline(v=eq.6.median.15, lty=1, lwd=1, col="black")
+abline(v=eq.7.median.15, lty=2, lwd=1, col="lightskyblue")
+abline(v=eq.8.median.15, lty=3, lwd=1, col="red")
+mtext("B", side=3, adj=0.05)
+mtext("k = 15", side=3)
+plot(x=predicted.20$u, y=predicted.20$Order, xlab="u", ylab="Order", xlim=c(0.02, 0.14), ylim=c(-1, 1))
+polygon(c(eq.6.low.20, eq.6.high.20, eq.6.high.20, eq.6.low.20), c(-1, -1, 1, 1), col="gray40")
+polygon(c(eq.7.low.20, eq.7.high.20, eq.7.high.20, eq.7.low.20), c(-1, -1, 1, 1), col="lightskyblue")
+polygon(c(eq.8.low.20, eq.8.high.20, eq.8.high.20, eq.8.low.20), c(-1, -1, 1, 1), col="red")
+points(x=predicted.20$u, y=predicted.20$Order)
+abline(h=0, lty=1, lwd=1, col="black")
+abline(v=eq.6.median.20, lty=1, lwd=1, col="black")
+abline(v=eq.7.median.20, lty=2, lwd=1, col="lightskyblue")
+abline(v=eq.8.median.20, lty=3, lwd=1, col="red")
+mtext("C", side=3, adj=0.05)
+mtext("k = 20", side=3)
+plot(x=predicted.24$u, y=predicted.24$Order, xlab="u", ylab="Order", xlim=c(0.02, 0.14), ylim=c(-1, 1))
+polygon(c(eq.6.low.24, eq.6.high.24, eq.6.high.24, eq.6.low.24), c(-1, -1, 1, 1), col="gray40")
+polygon(c(eq.7.low.24, eq.7.high.24, eq.7.high.24, eq.7.low.24), c(-1, -1, 1, 1), col="lightskyblue")
+polygon(c(eq.8.low.24, eq.8.high.24, eq.8.high.24, eq.8.low.24), c(-1, -1, 1, 1), col="red")
+points(x=predicted.24$u, y=predicted.24$Order)
+abline(h=0, lty=1, lwd=1, col="black")
+abline(v=eq.6.median.24, lty=1, lwd=1, col="black")
+abline(v=eq.7.median.24, lty=2, lwd=1, col="lightskyblue")
+abline(v=eq.8.median.24, lty=3, lwd=1, col="red")
+mtext("D", side=3, adj=0.05)
+mtext("k = 24", side=3)
+dev.off()
+par(mfrow=c(1,1))
+
+
+# This version of the figure zooms in on each panel's transition point.  The intervals are more visible, but it's harder
+# to get the overall sense of what's going on as the neighborhood size changes.
+
+
+graphics.off()
+png(filename="Fig2_Combined_Shading_Zoom.png")
+par(mfrow=c(2,2))
+plot(x=predicted.8$u, y=predicted.8$Order, xlab="u", ylab="Order", xlim=c(0.09, 0.14), ylim=c(-1, 1))
+polygon(c(eq.6.low.8, eq.6.high.8, eq.6.high.8, eq.6.low.8), c(-1, -1, 1, 1), col="gray40")
+polygon(c(eq.7.low.8, eq.7.high.8, eq.7.high.8, eq.7.low.8), c(-1, -1, 1, 1), col="lightskyblue")
+polygon(c(eq.8.low.8, eq.8.high.8, eq.8.high.8, eq.8.low.8), c(-1, -1, 1, 1), col="red") 
+points(x=predicted.8$u, y=predicted.8$Order)
+abline(h=0, lty=1, lwd=1, col="black")
+abline(v=eq.6.median.8, lty=1, lwd=1, col="black")
+abline(v=eq.7.median.8, lty=2, lwd=1, col="lightskyblue")
+abline(v=eq.8.median.8, lty=3, lwd=1, col="red")
+mtext("A", side=3, adj=0.05)
+mtext("k = 8", side=3)
+plot(x=predicted.15$u, y=predicted.15$Order, xlab="u", ylab="Order", xlim=c(0.04, 0.08), ylim=c(-1, 1))
+polygon(c(eq.6.low.15, eq.6.high.15, eq.6.high.15, eq.6.low.15), c(-1, -1, 1, 1), col="gray40")
+polygon(c(eq.7.low.15, eq.7.high.15, eq.7.high.15, eq.7.low.15), c(-1, -1, 1, 1), col="lightskyblue")
+polygon(c(eq.8.low.15, eq.8.high.15, eq.8.high.15, eq.8.low.15), c(-1, -1, 1, 1), col="red")
+points(x=predicted.15$u, y=predicted.15$Order)
+abline(h=0, lty=1, lwd=1, col="black")
+abline(v=eq.6.median.15, lty=1, lwd=1, col="black")
+abline(v=eq.7.median.15, lty=2, lwd=1, col="lightskyblue")
+abline(v=eq.8.median.15, lty=3, lwd=1, col="red")
+mtext("B", side=3, adj=0.05)
+mtext("k = 15", side=3)
+plot(x=predicted.20$u, y=predicted.20$Order, xlab="u", ylab="Order", xlim=c(0.03, 0.06), ylim=c(-1, 1))
+polygon(c(eq.6.low.20, eq.6.high.20, eq.6.high.20, eq.6.low.20), c(-1, -1, 1, 1), col="gray40")
+polygon(c(eq.7.low.20, eq.7.high.20, eq.7.high.20, eq.7.low.20), c(-1, -1, 1, 1), col="lightskyblue")
+polygon(c(eq.8.low.20, eq.8.high.20, eq.8.high.20, eq.8.low.20), c(-1, -1, 1, 1), col="red")
+points(x=predicted.20$u, y=predicted.20$Order)
+abline(h=0, lty=1, lwd=1, col="black")
+abline(v=eq.6.median.20, lty=1, lwd=1, col="black")
+abline(v=eq.7.median.20, lty=2, lwd=1, col="lightskyblue")
+abline(v=eq.8.median.20, lty=3, lwd=1, col="red")
+mtext("C", side=3, adj=0.05)
+mtext("k = 20", side=3)
+plot(x=predicted.24$u, y=predicted.24$Order, xlab="u", ylab="Order", xlim=c(0.03, 0.05), ylim=c(-1, 1))
+polygon(c(eq.6.low.24, eq.6.high.24, eq.6.high.24, eq.6.low.24), c(-1, -1, 1, 1), col="gray40")
+polygon(c(eq.7.low.24, eq.7.high.24, eq.7.high.24, eq.7.low.24), c(-1, -1, 1, 1), col="lightskyblue")
+polygon(c(eq.8.low.24, eq.8.high.24, eq.8.high.24, eq.8.low.24), c(-1, -1, 1, 1), col="red")
+points(x=predicted.24$u, y=predicted.24$Order)
+abline(h=0, lty=1, lwd=1, col="black")
+abline(v=eq.6.median.24, lty=1, lwd=1, col="black")
+abline(v=eq.7.median.24, lty=2, lwd=1, col="lightskyblue")
+abline(v=eq.8.median.24, lty=3, lwd=1, col="red")
+mtext("D", side=3, adj=0.05)
+mtext("k = 24", side=3)
+dev.off()
+par(mfrow=c(1,1))
+
+
+
+
+graphics.off()
+png(filename="Fig.4A.png")
+plot(x=neighborhood.frame$average.k, y=neighborhood.frame$sd.k, xlab="Neighborhood size (k)", ylab="Std. Dev. k", xlim=c(8, 30), ylim=c(2, 6))
+dev.off()
+
+graphics.off()
+png(filename="Fig.4B.png")
+plot(x=neighborhood.frame$average.k, y=neighborhood.frame$sd.inverse, xlab="Neighborhood size (k)", ylab="Std. Dev. k", xlim=c(8, 30), ylim=c(0, 0.10))
+dev.off()
+
+graphics.off()
+png(filename="Fig_4_Combined.png", width=480, height=960)
+par(mfrow=c(2,1))
+plot(x=neighborhood.frame$average.k, y=neighborhood.frame$sd.k, xlab="Neighborhood size (k)", ylab="Std. Dev. k", xlim=c(8, 30), ylim=c(2, 6))
+mtext("A", side=3, adj=0.05)
+plot(x=neighborhood.frame$average.k, y=neighborhood.frame$sd.inverse, xlab="Neighborhood size (k)", ylab="Std. Dev. k", xlim=c(8, 30), ylim=c(0, 0.10))
+mtext("B", side=3, adj=0.05)
+dev.off()
+par(mfrow=c(1,1))
+
+
+graphics.off()
+png(filename="Fig.CoV.png")
+plot(x=neighborhood.frame$average.k, y=neighborhood.frame$sd.k/neighborhood.frame$average.k, xlab="Neighborhood size (k)", ylab="Coefficient of Variation k", xlim=c(8, 30))
+dev.off()
+
+# We also need to plot Figure 2:
+
+x.list <- seq(from=2, to=30, by=.05)
+y.list.6 <- 1/x.list
+y.list.7 <- 1/(x.list+2)
+y.list.8 <- (x.list - 1)/(x.list*x.list)
+
+graphics.off()
+png(filename="Fig.3.png")
+plot(x=x.list, y=y.list.6, xlim=c(2, 30), ylim=c(0,0.5), xlab="Neighborhood size (k)", ylab="Critical u", col="white")
+
+lines(x=x.list, y=y.list.6, col="black", lty=1, lwd=2)
+lines(x=x.list, y=y.list.7, col="lightskyblue", lty=2, lwd=2)
+lines(x=x.list, y=y.list.8, col="red", lty=3, lwd=2)
+
+legend(20, 0.45, c("Equation 6", "Equation 7", "Equation 8"), lty=c(1, 2, 3), lwd=c(2, 2, 2), col=c("black", "lightskyblue", "red"))
+
+dev.off()
