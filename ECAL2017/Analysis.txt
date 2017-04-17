@@ -3,7 +3,7 @@
 # The basic directory ran off the bash lines: counter=1000; for i in $( seq 0.02 0.005 0.145 ); do for j in 0.01994711 0.02731371 0.03153916 0.03454941; do for k in {1..10}; do ./SimplePDWorld -u $i -r $j -N 6400 -E 5001 -SEED $((k+counter)); counter=$((counter+10)); done; done; done;
 # and was used to generate the data for Figure 3.
 
-# The MorePrecision directory ran off the bash lines: counter=1000; for i in 0.02; do for j in 0.01994711 0.02115711 0.02230155 0.02339006 0.02443013 0.02542768 0.02638755 0.02731371 0.02820948 0.02907767 0.02992067 0.03074057 0.03153916 0.03231802 0.03382198 0.03454941 0.03526185 0.03596017 0.03664519 0.03731763 0.03797817 0.03862742; do for k in {1..10}; do ./SimplePDWorld -u $i -r $j -N 6400 -E 11 -SEED $((k+counter)); counter=$((counter+10)); done; done; done;
+# The MorePrecision directory ran off the bash lines: counter=1000; for i in 0.02; do for j in 0.01994711 0.02115711 0.02230155 0.02339006 0.02443013 0.02542768 0.02638755 0.02731371 0.02820948 0.02907767 0.02992067 0.03074057 0.03153916 0.03231802 0.03307855 0.03382198 0.03454941 0.03526185 0.03596017 0.03664519 0.03731763 0.03797817 0.03862742; do for k in {1..10}; do ./SimplePDWorld -u $i -r $j -N 6400 -E 11 -SEED $((k+counter)); counter=$((counter+10)); done; done; done;
 # and was used to generate the data for Figure 4.
 
 setwd("~/Dropbox/Wiser, Mike/Projects/SpatialPD/")
